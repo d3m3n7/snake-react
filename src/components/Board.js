@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Board = ({ snake, food, boardSize }) => {
   const renderBoard = () => {
     const board = [];

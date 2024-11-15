@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import Board from './components/Board';
 import GameOver from './components/GameOver';
+import { generateNewFood, isFoodEaten } from './logic/environment';
+import { moveSnake, hasCollision } from './logic/agent';
 
 const BOARD_SIZE = 10;
 
@@ -11,56 +13,39 @@ function App() {
   const [direction, setDirection] = useState({ x: 1, y: 0 });
   const [gameOver, setGameOver] = useState(false);
 
-  const boardRef = useRef();
-
-  const moveSnake = () => {
+  const updateGameState = () => {
     if (gameOver) return;
 
-    const newSnake = [...snake];
-    const head = {
-      x: (newSnake[0].x + direction.x + BOARD_SIZE) % BOARD_SIZE,
-      y: (newSnake[0].y + direction.y + BOARD_SIZE) % BOARD_SIZE,
-    };
+    // Move the snake
+    const newSnake = moveSnake(snake, direction, BOARD_SIZE);
 
-    if (head.x === food.x && head.y === food.y) {
-      newSnake.unshift(head);
-      generateNewFood();
-    } else {
-      newSnake.pop();
-      newSnake.unshift(head);
+    // Check for food collision
+    if (isFoodEaten(newSnake[0], food)) {
+      newSnake.push(snake[snake.length - 1]); // Extend snake
+      setFood(generateNewFood(newSnake, BOARD_SIZE)); // Generate new food
     }
 
-    if (newSnake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
+    // Check for collisions
+    if (hasCollision(newSnake)) {
       setGameOver(true);
     } else {
       setSnake(newSnake);
     }
   };
 
-  const generateNewFood = () => {
-    let newFood;
-    do {
-      newFood = {
-        x: Math.floor(Math.random() * BOARD_SIZE),
-        y: Math.floor(Math.random() * BOARD_SIZE),
-      };
-    } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
-    setFood(newFood);
-  };
-
   const handleKeyDown = (e) => {
     switch (e.key) {
       case 'ArrowUp':
-        setDirection({ x: 0, y: -1 });
+        if (direction.y === 0) setDirection({ x: 0, y: -1 });
         break;
       case 'ArrowDown':
-        setDirection({ x: 0, y: 1 });
+        if (direction.y === 0) setDirection({ x: 0, y: 1 });
         break;
       case 'ArrowLeft':
-        setDirection({ x: -1, y: 0 });
+        if (direction.x === 0) setDirection({ x: -1, y: 0 });
         break;
       case 'ArrowRight':
-        setDirection({ x: 1, y: 0 });
+        if (direction.x === 0) setDirection({ x: 1, y: 0 });
         break;
       default:
         break;
@@ -68,14 +53,14 @@ function App() {
   };
 
   useEffect(() => {
-    const interval = setInterval(moveSnake, 200);
+    const interval = setInterval(updateGameState, 200);
     return () => clearInterval(interval);
-  });
+  }, [snake, direction, food, gameOver]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, [direction]);
 
   return (
     <div className="App">
